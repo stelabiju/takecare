@@ -9,4 +9,4 @@ env/
 .idea/
 .vscode/
 zap.yaml
-zap-report.html
+zap_report.html
