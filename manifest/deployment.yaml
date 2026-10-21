@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: takecare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: takecare
+  template:
+    metadata:
+      labels:
+        app: takecare
+    spec:
+      containers:
+        - name: takecare
+          image: stelabiju/takecare-devsecops:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DB_HOST
+              value: mysql
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: takecare
+spec:
+  type: NodePort
+  selector:
+    app: takecare
+  ports:
+    - port: 80
+      targetPort: 8000
