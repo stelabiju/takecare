@@ -33,15 +33,17 @@ pipeline {
                     docker run --rm \
                     -v "$WORKSPACE:/src" \
                     aquasec/trivy:latest fs \
-                    --scanners vuln,misconfig \
-                    /src
+                    --scanners vuln,misconfig /src
                 '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:latest .'
+                sh '''
+                    docker build -t $IMAGE_NAME:$BUILD_NUMBER .
+                    docker tag $IMAGE_NAME:$BUILD_NUMBER $IMAGE_NAME:latest
+                '''
             }
         }
 
@@ -54,9 +56,11 @@ pipeline {
                 )]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login \
-                        -u "$DOCKER_USER" --password-stdin
+                            -u "$DOCKER_USER" --password-stdin
 
+                        docker push $IMAGE_NAME:$BUILD_NUMBER
                         docker push $IMAGE_NAME:latest
+
                         docker logout
                     '''
                 }
@@ -71,13 +75,15 @@ pipeline {
                     passwordVariable: 'GIT_PASS'
                 )]) {
                     sh '''
-                        sed -i "s|image: .*|image: $IMAGE_NAME:latest|" manifest/deployment.yaml
+                        sed -i "s|image: .*|image: $IMAGE_NAME:$BUILD_NUMBER|" manifest/deployment.yaml
 
-                        git config user.name "Jenkins"
-                        git config user.email "jenkins@example.com"
+                        git config user.name "stelabiju"
+                        git config user.email "stelabiju@gmail.com"
 
                         git add manifest/deployment.yaml
-                        git commit -m "Update TakeCare image"
+
+                        git commit -m "Update TakeCare image to build $BUILD_NUMBER"
+
                         git push https://$GIT_USER:$GIT_PASS@github.com/stelabiju/takecare.git HEAD:main
                     '''
                 }
